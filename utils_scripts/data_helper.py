@@ -5,7 +5,7 @@ import numpy as np
 def get_images_as_matrix(data_path, file_type='tif'):
     image_files = glob.glob(data_path + '*' + file_type)
 
-    assert len(image_files) != 0, "0 files found in the directory {}".format(data_path)
+    assert len(image_files) != 0, f"0 files found in the directory {data_path}"
 
     images = []
     for filename in image_files:

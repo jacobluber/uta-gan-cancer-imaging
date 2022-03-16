@@ -1,25 +1,41 @@
+
+'''
+Filename: uta-gan-cancer-imaging/codex_data_module.py
+Author: mxs2361
+
+'''
+
+
 import pytorch_lightning as pl
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
 
 from utils_scripts.data_helper import get_images_as_matrix
 from typing import Optional
+import torch
+import numpy as np
 
 class CODEXDataModule(pl.LightningDataModule):
 
-    def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', data_format = 'tif'):
+    def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', data_format = 'tif', demo_data = False):
         super().__init__()
         self.src_data_dir = src_data_dir
         self.tgt_data_dir = tgt_data_dir
         self.data_format = data_format
         self.transform = transforms.Compose([transforms.ToTensor()])
+        self.demo_data = demo_data
 
 
     def prepare_data(self):
+        if self.demo_data:
+            self.src_images = torch.rand([2,25, 1024, 1024]).to(torch.float32)
+            self.tgt_images = torch.rand([2,4, 1024, 1024]).to(torch.float32)
+            self.images =[(src, tgt) for src, tgt in zip(self.src_images, self.tgt_images)] 
         # Use this method to do things that might write to disk or that need to be done only from a single process in distributed settings.
-        self.src_images = get_images_as_matrix(self.src_data_dir,self.data_format) 
-        self.tgt_images = get_images_as_matrix(self.tgt_data_dir, self.data_format)
-        self.images = [(src, tgt) for src, tgt in zip(self.src_images, self.tgt_images)]
+        else:
+            self.src_images = get_images_as_matrix(self.src_data_dir,self.data_format) 
+            self.tgt_images = get_images_as_matrix(self.tgt_data_dir, self.data_format)
+            self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
 
     def setup(self, stage: Optional[str] = None):
         # There are also data operations you might want to perform on every GPU. Use setup to do things like: transform
@@ -33,6 +49,8 @@ class CODEXDataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         pass
+
+
 
 def test():
     c = CODEXDataModule(src_data_dir = '/home/mxs2361/Dataset/codex_data/Data_scaled/train_A/', \
