@@ -9,7 +9,7 @@ Author: mxs2361
 import pytorch_lightning as pl
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
-
+from skimage import exposure, img_as_ubyte, io, transform
 from utils_scripts.data_helper import get_images_as_matrix
 from typing import Optional
 import torch
@@ -40,15 +40,17 @@ class CODEXDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         # There are also data operations you might want to perform on every GPU. Use setup to do things like: transform
         self.dims = self.src_images[0].shape
-
+    # serWarning: num_workers>0, persistent_workers=False, and strategy=ddp_spawn may result in data loading bottlenecks. Consider setting persistent_workers=True (this is a limitation of Python .spawn() and PyTorch)
     def train_dataloader(self):
-        return DataLoader(self.images, batch_size = 1)
+        return DataLoader(self.images, batch_size = 2, num_workers=4, pin_memory=True, persistent_workers=True)
 
     def val_dataloader(self):
         pass
 
     def test_dataloader(self):
         pass
+    
+    
 
 
 

@@ -28,11 +28,13 @@ import tiffile as tif
 def get_grid(input, is_real=True):
     if is_real:
         grid = torch.FloatTensor(input.shape).fill_(1.0)
+        # grid = grid.cuda(grid.device.index)
         # print(f'grade shape in get grid {grid.shape}')
 
     elif not is_real:
         grid = torch.FloatTensor(input.shape).fill_(0.0)
 
+    grid = grid.cuda(grid.device.index)
     return grid
 
 #------------------------------------------------------------------------------

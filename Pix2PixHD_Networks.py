@@ -140,9 +140,8 @@ class Discriminator(nn.Module):
 class Loss(object):
     def __init__(self, opt):
         self.opt = opt
-        self.device = torch.device('cuda:0' if opt.gpu_ids != -1 else 'cpu:0')
-        self.dtype = torch.float16 if opt.data_type == 16 else torch.float32
-
+        # self.dtype = torch.float16 if opt.data_type == 16 else torch.float32
+        self.dtype = torch.float32
         self.criterion = nn.MSELoss()
         self.FMcriterion = nn.L1Loss()
         self.n_D = opt.n_D
@@ -158,12 +157,16 @@ class Loss(object):
         # print(f'fake data shape {fake.shape}, input shape {input.shape} , target shape {target.shape} ')
         real_features = D(torch.cat((input, target), dim=1))
         fake_features = D(torch.cat((input, fake.detach()), dim=1))
+        # if True:
+        #     print('On GPU changing device')
+        #     real_features = real_features.cuda(real_features.device.index)
+        #     fake_features = fake_features.cuda(fake_features.device.index)
         # print(f'real features len {len(real_features)}, real feature[0] len {len(real_features[0])}, real feature[0][0] {real_features[0][0].shape}')
         # print(f'fake features len {len(fake_features)}, fake feature[0] len {len(fake_features[0])}, fake feature[0][0] {fake_features[0][0].shape}')
 
         for i in range(self.n_D):
-            real_grid = get_grid(real_features[i][-1], is_real=True).to(self.device, self.dtype)
-            fake_grid = get_grid(fake_features[i][-1], is_real=False).to(self.device, self.dtype)
+            real_grid = get_grid(real_features[i][-1], is_real=True)
+            fake_grid = get_grid(fake_features[i][-1], is_real=False)
 
             #grid return all 1 for real, all 0 for fake
             loss_D += (self.criterion(real_features[i][-1], real_grid) +
@@ -183,7 +186,7 @@ class Loss(object):
         fake_features = D(torch.cat((input, fake), dim=1))
 
         for i in range(self.n_D):
-            real_grid = get_grid(fake_features[i][-1], is_real=True).to(self.device, self.dtype)
+            real_grid = get_grid(fake_features[i][-1], is_real=True).to( self.dtype)
             loss_G += self.criterion(fake_features[i][-1], real_grid)
             
             for j in range(len(fake_features[0])):
@@ -208,8 +211,8 @@ class Loss(object):
         print(f'fake features len {len(fake_features)}, fake feature[0] len {len(fake_features[0])}, fake feature[0][0] {fake_features[0][0].shape}')
 
         for i in range(self.n_D):
-            real_grid = get_grid(real_features[i][-1], is_real=True).to(self.device, self.dtype)
-            fake_grid = get_grid(fake_features[i][-1], is_real=False).to(self.device, self.dtype)
+            real_grid = get_grid(real_features[i][-1], is_real=True).to(self.dtype)
+            fake_grid = get_grid(fake_features[i][-1], is_real=False).to(self.dtype)
 
             #grid return all 1 for real, all 0 for fake
             loss_D += (self.criterion(real_features[i][-1], real_grid) +
@@ -218,7 +221,7 @@ class Loss(object):
         fake_features = D(torch.cat((input, fake), dim=1))
 
         for i in range(self.n_D):
-            real_grid = get_grid(fake_features[i][-1], is_real=True).to(self.device, self.dtype)
+            real_grid = get_grid(fake_features[i][-1], is_real=True).to( self.dtype)
             loss_G += self.criterion(fake_features[i][-1], real_grid)
             
             for j in range(len(fake_features[0])):
