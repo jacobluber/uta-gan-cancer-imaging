@@ -42,7 +42,7 @@ class CODEXDataModule(pl.LightningDataModule):
         self.dims = self.src_images[0].shape
     # serWarning: num_workers>0, persistent_workers=False, and strategy=ddp_spawn may result in data loading bottlenecks. Consider setting persistent_workers=True (this is a limitation of Python .spawn() and PyTorch)
     def train_dataloader(self):
-        return DataLoader(self.images, batch_size = 2, num_workers=4, pin_memory=True, persistent_workers=True)
+        return DataLoader(self.images, batch_size = 2, num_workers=2, pin_memory=True, persistent_workers=True)
 
     def val_dataloader(self):
         pass

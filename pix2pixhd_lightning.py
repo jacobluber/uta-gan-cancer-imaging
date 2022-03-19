@@ -5,6 +5,7 @@ import torch
 from Pix2PixHD_Networks import Discriminator, Generator, Loss
 from Pix2PixHD_Utils import Manager, update_lr, weights_init
 import pytorch_lightning as pl
+from utils_scripts.utils import save
 
 class Pix2PixHDCodex(pl.LightningModule):
 
@@ -60,7 +61,11 @@ class Pix2PixHDCodex(pl.LightningModule):
             loss = self._gen_step(conditioned_images = condition, real_images = real)
             self.log('Generator Loss', loss)
 
-        if self.current_epoch%self.display_step==0 and batch_idx==0 and optimizer_idx==1:
+        if self.current_epoch % 100 == 0 and batch_idx ==0  : # and optimizer_idx==1
+            
+            print('epoch ', self.current_epoch, self.global_step)
             fake = self.gen(condition).detach()
+            save(target = real, gen = fake, path = self.opt.image_dir, epoch = self.current_epoch, image=True)
+            print('Image saved')
             # display_progress(condition[0], fake[0], real[0])
         return loss
