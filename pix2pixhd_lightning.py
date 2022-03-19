@@ -66,6 +66,6 @@ class Pix2PixHDCodex(pl.LightningModule):
             print('epoch ', self.current_epoch, self.global_step)
             fake = self.gen(condition).detach()
             save(target = real, gen = fake, path = self.opt.image_dir, epoch = self.current_epoch, image=True)
-            print('Image saved')
+            # print('Image saved')
             # display_progress(condition[0], fake[0], real[0])
         return loss

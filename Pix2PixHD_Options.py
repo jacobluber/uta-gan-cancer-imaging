@@ -75,6 +75,7 @@ class BaseOption(object):
         self.parser.add_argument('--display_freq', type=int, default=100)
         self.parser.add_argument('--save_scale', type=float, default=1)
         self.parser.add_argument('--display_scale', type=float, default=1)
+        self.parser.add_argument('--tb_logger_name', type=str, default='ligtning_codex')
 
         
     def parse(self):

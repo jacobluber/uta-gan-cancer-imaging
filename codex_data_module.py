@@ -17,13 +17,16 @@ import numpy as np
 
 class CODEXDataModule(pl.LightningDataModule):
 
-    def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', data_format = 'tif', demo_data = False):
+    def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/',\
+    src_ch: int=25, tgt_ch: int=4, data_format = 'tif', demo_data = False):
         super().__init__()
         self.src_data_dir = src_data_dir
         self.tgt_data_dir = tgt_data_dir
         self.data_format = data_format
         self.transform = transforms.Compose([transforms.ToTensor()])
         self.demo_data = demo_data
+        self.src_ch = src_ch
+        self.tgt_ch = tgt_ch
 
 
     def prepare_data(self):
@@ -33,8 +36,8 @@ class CODEXDataModule(pl.LightningDataModule):
             self.images =[(src, tgt) for src, tgt in zip(self.src_images, self.tgt_images)] 
         # Use this method to do things that might write to disk or that need to be done only from a single process in distributed settings.
         else:
-            self.src_images = get_images_as_matrix(self.src_data_dir,self.data_format) 
-            self.tgt_images = get_images_as_matrix(self.tgt_data_dir, self.data_format)
+            self.src_images = get_images_as_matrix(self.src_data_dir, self.src_ch, self.data_format) 
+            self.tgt_images = get_images_as_matrix(self.tgt_data_dir, self.tgt_ch, self.data_format)
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
 
     def setup(self, stage: Optional[str] = None):
