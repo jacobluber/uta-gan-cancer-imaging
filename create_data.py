@@ -61,11 +61,11 @@ class TrainingFileCreation():
         np_list_for_channels = []  
         for channel_id in range(image.shape[0]):
             this_channel_data = image[channel_id, :, :]
-            this_channel_rescale = transform.resize(this_channel_data, shape).astype(np.float32)
+            this_channel_rescaled = transform.resize(this_channel_data, shape).astype(np.float32)
             # print('updated scale ', this_channel_rescale.shape)
             # this_channel_8bit = img_as_ubyte(exposure.rescale_intensity(this_channel_rescale))
 
-            this_channel_rescaled = exposure.rescale_intensity(this_channel_rescale)
+            this_channel_rescaled = exposure.rescale_intensity(this_channel_rescaled, out_range=(0,255))
             np_list_for_channels.append(this_channel_rescaled)
         np_tuples_for_channels = tuple(np_list_for_channels)
         scaled_image = np.stack(np_tuples_for_channels)
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     print(len(filenames))
     filepaths = [raw_file_dir + filename for filename in filenames]
 
-    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (4096, 4096), write_to_disk = True,\
-     write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_4096')
+    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), write_to_disk = True,\
+     write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_1024')
     t.create_data_from_raw_files()
 
 

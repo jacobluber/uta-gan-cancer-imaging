@@ -19,10 +19,10 @@ which python
 conda activate pytorch_gpu
 
 
-python3 train_lightning.py --input_ch 25 --target_ch 1 --input_dir_train \
+python3 train_lightning.py --input_ch 25 --target_ch 4 --input_dir_train \
 /home/mxs2361/Dataset/codex_data/Data_scaled_1024/train_A/ --target_dir_train \
 /home/mxs2361/Dataset/codex_data/Data_scaled_1024/train_B/  --n_workers 16 --saturation_clip_input False \
 --saturation_clip_target False --data_type 32 --batch_size 4 --n_epochs 250 \
 --n_downsample 2 --n_residual 2 --n_df 16 --n_D 3 \
---tb_logger_name four_channel --dataset_name four_channel 
+--tb_logger_name four_channel_gray --dataset_name four_channel_gray
 
