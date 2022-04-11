@@ -116,6 +116,7 @@ class TrainOption(BaseOption):
         # directory path for training
         self.parser.add_argument('--input_dir_train', type=str, default='./datasets/Train/Input', help='directory path of the input files for the model training')
         self.parser.add_argument('--target_dir_train', type=str, default='./datasets/Train/Target', help='directory path of the input files for the model training')
+        self.parser.add_argument('--raw_data_dir', type=str, default='./datasets/Train/Target', help='directory path of the raw input files for the model training')
         #----------------------------------------------------------------------
         
         self.parser.add_argument('--is_train', type=bool, default=True, help='train flag')

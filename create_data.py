@@ -21,15 +21,20 @@ class TrainingFileCreation():
     """This file reads raw files and create source and target images split by channels (dest: write_data_dir/trainA and write_data_dir/trainB)
     Raw file directory is expected to be in the format of raw_file_dir/hubmap_id/*.tif
     """
-    def __init__(self,  raw_filepaths: str, rescale_shape: tuple, tiles: bool = False, tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
+    def __init__(self,  raw_filepaths: str, rescale_shape: tuple,\
+        input_channel: int = 25, output_channel: int = 4, tiles: bool = False,\
+             tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
         
         
         self.raw_filepaths = raw_filepaths
         self.rescale_shape = rescale_shape
+        self.input_channel = input_channel
+        self.output_channel = output_channel
         self.tiles = tiles
         self.tile_size = tile_size
         self.write_to_disk = write_to_disk
         self.write_data_dir = write_data_dir
+        
 
 
 
@@ -44,15 +49,15 @@ class TrainingFileCreation():
         for filepath in self.raw_filepaths:
             this_image = io.imread(filepath)
 
-            src_image = this_image[:20, :, :] # Select first 25 channels as condition image
-            tgt_image = this_image[20:, :, :] # Select last 4 channels as target image
+            src_image = this_image[:self.input_channel, :, :] # Select first n channels as condition image
+            tgt_image = this_image[self.input_channel:, :, :] # Select last 29 - n channels as target image
 
             if not self.tiles:
                 src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
                 tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
 
-            assert src_image.shape[0] == 20, "Source image dimension mismatch"
-            assert tgt_image.shape[0] == 9, "Target image dimension mismatch"
+            assert src_image.shape[0] == self.input_channel, "Source image dimension mismatch"
+            assert tgt_image.shape[0] == self.output_channel, "Target image dimension mismatch"
 
             if self.write_to_disk:
                 img_file_name = filepath.split('/')[-1]
@@ -66,15 +71,23 @@ class TrainingFileCreation():
                 else:
                     TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_' + img_file_name), src_image) # Writing condition image
                     TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_' + img_file_name), tgt_image) # Writing target image
+            
+            else:
+                src_images.append(src_image)
+                tgt_images.append(tgt_image)
             print('Count ', count )
+            
             count += 1
+        
+        if not self.write_to_disk:
+            return src_images, tgt_images
     
     
     def save_tiles(self, img, img_file_name,src):
         if src:
-            channel = 25
+            channel = self.input_channel
         else:
-            channel = 4
+            channel = self.output_channel
         tiler = Tiler(data_shape=img.shape,
                     tile_shape=(channel, self.tile_size, self.tile_size),
                     channel_dimension=0)

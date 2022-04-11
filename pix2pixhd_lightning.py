@@ -69,6 +69,29 @@ class Pix2PixHDCodex(pl.LightningModule):
             # print('Image saved')
             # display_progress(condition[0], fake[0], real[0])
         return loss
+    
+    def validation_step(self, batch, batch_idx):
+        condition, real = batch
+        
+        if self.on_gpu:
+            condition = condition.cuda(condition.device.index)
+            real = real.cuda(real.device.index)
+        self.gen.train()
+        loss = None
+        
+        loss = self._disc_step(conditioned_images= condition, real_images  = real)
+        self.log('PatchGAN (val) Loss', loss)
+        loss = self._gen_step(conditioned_images = condition, real_images = real)
+        self.log('Generator (val) Loss', loss)
+
+        if self.current_epoch % 100 == 0 and batch_idx ==0  : # and optimizer_idx==1
+            
+            print('epoch ', self.current_epoch, self.global_step)
+            fake = self.gen(condition).detach()
+            save(target = real, gen = fake, path = self.opt.image_dir, epoch = self.current_epoch, image=True)
+            # print('Image saved')
+            # display_progress(condition[0], fake[0], real[0])
+        return loss
 
     def test_step(self, batch, batch_idx ):
         condition, real = batch

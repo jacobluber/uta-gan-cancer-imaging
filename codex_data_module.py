@@ -10,36 +10,59 @@ import pytorch_lightning as pl
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
 from skimage import exposure, img_as_ubyte, io, transform
-from utils_scripts.data_helper import get_images_as_matrix
+from utils_scripts.data_helper import get_images_as_matrix, get_image_as_matrix_with_metadata
 from typing import Optional
 import torch
 import numpy as np
+from create_data import TrainingFileCreation
 
 class CODEXDataModule(pl.LightningDataModule):
 
-    def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/',\
-    src_ch: int=25, tgt_ch: int=4, data_format = 'tif', demo_data = False):
+    def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', raw_data_dir = None,\
+    src_ch: int=25, tgt_ch: int=4, data_format = 'tif', data_mode = "data_split"):
         super().__init__()
         self.src_data_dir = src_data_dir
         self.tgt_data_dir = tgt_data_dir
+        self.raw_data_dir = raw_data_dir
         self.data_format = data_format
         self.transform = transforms.Compose([transforms.ToTensor()])
-        self.demo_data = demo_data
+        self.data_mode = data_mode
         self.src_ch = src_ch
         self.tgt_ch = tgt_ch
         self.train_data_precentige = 0.8 
 
 
     def prepare_data(self):
-        if self.demo_data:
-            self.src_images = torch.rand([2,25, 1024, 1024]).to(torch.float32)
-            self.tgt_images = torch.rand([2,4, 1024, 1024]).to(torch.float32)
+        
+        if self.data_mode == 'demo':
+            self.src_images = torch.rand([20, self.src_ch, 1024, 1024]).to(torch.float32)
+            self.tgt_images = torch.rand([20, self.tgt_ch, 1024, 1024]).to(torch.float32)
             self.images =[(src, tgt) for src, tgt in zip(self.src_images, self.tgt_images)] 
         # Use this method to do things that might write to disk or that need to be done only from a single process in distributed settings.
-        else:
+        elif self.data_mode == 'data_split':
             self.src_images = get_images_as_matrix(self.src_data_dir, self.src_ch, self.data_format) 
             self.tgt_images = get_images_as_matrix(self.tgt_data_dir, self.tgt_ch, self.data_format)
+            
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
+        
+        elif self.data_mode == 'raw_data':
+            import pandas as pd
+            raw_file_dir = self.raw_data_dir
+            df = pd.read_csv('/home/mxs2361/projects/hubmap_data_analysis/codex_meta_info.csv')
+
+            images_29_channel = df[df['channel'] == 29] # Testing
+            filenames = list(images_29_channel['filename'])
+
+            print(len(filenames))
+            filepaths = [raw_file_dir + filename for filename in filenames]
+
+            t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = False,\
+                input_channel= self.src_ch, output_channel = self.tgt_ch,
+            write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_20_9')
+            self.src_images, self.tgt_images = t.create_data_from_raw_files()
+            self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
+        else:
+            print(f'Invalid data mode {self.data_mode}')
 
     def setup(self, stage: Optional[str] = None):
         # There are also data operations you might want to perform on every GPU. Use setup to do things like: transform
@@ -61,8 +84,14 @@ class CODEXDataModule(pl.LightningDataModule):
 
 
 def test():
+    raw_data_dir = '/home/mxs2361/Dataset/codex_data/raw_data/'
+
+    #Test with the split data
+    # c = CODEXDataModule(src_data_dir = '/home/mxs2361/Dataset/codex_data/Data_scaled/train_A/', \
+    #         tgt_data_dir='/home/mxs2361/Dataset/codex_data/Data_scaled/train_B/' )
+    #Test with raw_data
     c = CODEXDataModule(src_data_dir = '/home/mxs2361/Dataset/codex_data/Data_scaled/train_A/', \
-            tgt_data_dir='/home/mxs2361/Dataset/codex_data/Data_scaled/train_B/' )
+            tgt_data_dir='/home/mxs2361/Dataset/codex_data/Data_scaled/train_B/', raw_data_dir=raw_data_dir, data_mode='raw_data' )
     c.prepare_data()
     train_batch = c.train_dataloader()
     train_data = next(iter(train_batch))
