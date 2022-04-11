@@ -13,19 +13,24 @@ import scipy.misc
 import imageio
 from multiprocessing import Pool
 import pathlib
+from tiler import Tiler, Merger
+
 
 
 class TrainingFileCreation():
     """This file reads raw files and create source and target images split by channels (dest: write_data_dir/trainA and write_data_dir/trainB)
     Raw file directory is expected to be in the format of raw_file_dir/hubmap_id/*.tif
     """
-    def __init__(self,  raw_filepaths: str, rescale_shape: tuple, write_to_disk: bool = True, write_data_dir: str = None):
+    def __init__(self,  raw_filepaths: str, rescale_shape: tuple, tiles: bool = False, tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
         
         
         self.raw_filepaths = raw_filepaths
         self.rescale_shape = rescale_shape
+        self.tiles = tiles
+        self.tile_size = tile_size
         self.write_to_disk = write_to_disk
         self.write_data_dir = write_data_dir
+
 
 
         if write_to_disk:
@@ -39,22 +44,48 @@ class TrainingFileCreation():
         for filepath in self.raw_filepaths:
             this_image = io.imread(filepath)
 
-            src_image = this_image[:25, :, :] # Select first 25 channels as condition image
-            tgt_image = this_image[25:, :, :] # Select last 4 channels as target image
+            src_image = this_image[:20, :, :] # Select first 25 channels as condition image
+            tgt_image = this_image[20:, :, :] # Select last 4 channels as target image
 
-            src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
-            tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
+            if not self.tiles:
+                src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
+                tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
 
-            assert src_image.shape[0] == 25, "Source image dimension mismatch"
-            assert tgt_image.shape[0] == 4, "Target image dimension mismatch"
+            assert src_image.shape[0] == 20, "Source image dimension mismatch"
+            assert tgt_image.shape[0] == 9, "Target image dimension mismatch"
 
             if self.write_to_disk:
                 img_file_name = filepath.split('/')[-1]
-                TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_' + img_file_name), src_image) # Writing condition image
-                TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_' + img_file_name), tgt_image) # Writing target image
+                slide_id = filepath.split('/')[-2]
+                img_file_name = slide_id + '_' + img_file_name
+                if self.tiles:
+                    # Create tiles for source image
+                    self.save_tiles(img=src_image, img_file_name=img_file_name, src=True)
+                    self.save_tiles(img=tgt_image, img_file_name=img_file_name, src=False)
+
+                else:
+                    TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_' + img_file_name), src_image) # Writing condition image
+                    TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_' + img_file_name), tgt_image) # Writing target image
             print('Count ', count )
             count += 1
     
+    
+    def save_tiles(self, img, img_file_name,src):
+        if src:
+            channel = 25
+        else:
+            channel = 4
+        tiler = Tiler(data_shape=img.shape,
+                    tile_shape=(channel, self.tile_size, self.tile_size),
+                    channel_dimension=0)
+        if src:
+            for tile_id, tile in tiler.iterate(img):
+                tile = exposure.rescale_intensity(tile, out_range=(0,255))
+                TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_tile_{}'.format(tile_id) + img_file_name), tile) 
+        else:
+           for tile_id, tile in tiler.iterate(img):
+               tile = exposure.rescale_intensity(tile, out_range=(0,255))
+               TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_tile_{}'.format(tile_id) + img_file_name), tile) 
     
     @staticmethod
     def rescale_image(image, shape):
@@ -90,8 +121,8 @@ if __name__ == '__main__':
     print(len(filenames))
     filepaths = [raw_file_dir + filename for filename in filenames]
 
-    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), write_to_disk = True,\
-     write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_1024')
+    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = True,\
+     write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_20_9')
     t.create_data_from_raw_files()
 
 

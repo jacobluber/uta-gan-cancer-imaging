@@ -78,7 +78,7 @@ class Pix2PixHDCodex(pl.LightningModule):
         if self.on_gpu:
             condition = condition.cuda(condition.device.index)
             real = real.cuda(real.device.index)
-        self.gen.train()
+        self.gen.test()
         loss = None
         loss = self._disc_step(conditioned_images= condition, real_images  = real)
         self.log('PatchGAN Loss', loss)

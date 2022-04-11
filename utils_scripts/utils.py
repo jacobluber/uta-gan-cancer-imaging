@@ -1,5 +1,6 @@
 import tiffile as tif 
 import torch
+import os
 
 def save_image( image_tensor, path):
     np_image = image_tensor[0].squeeze().cpu().float().numpy()

@@ -22,7 +22,7 @@ if __name__ == '__main__':
     display_step = 1
     
     # pix2pix = Pix2PixHDCodex(opt, display_step)
-    pix2pix = Pix2PixHDCodex.load_from_checkpoint('tb_logs/four_channel_gray/version_2/checkpoints/epoch=999-step=16000.ckpt')
+    pix2pix = Pix2PixHDCodex.load_from_checkpoint('tb_logs/four_channel_tiles_512/version_0/checkpoints/epoch=999-step=16000.ckpt')
     logger = TensorBoardLogger("tb_logs", name= opt.tb_logger_name)
     # trainer = pl.Trainer(max_epochs=1000, gpus=-1, logger = logger)
     trainer = pl.Trainer(max_epochs=1000, gpus = 1, min_epochs=1, auto_lr_find=True, auto_scale_batch_size=False,
