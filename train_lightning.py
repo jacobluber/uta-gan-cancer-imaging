@@ -16,7 +16,11 @@ if __name__ == '__main__':
     print(opt)
     data = CODEXDataModule(src_data_dir = opt.input_dir_train, \
     tgt_data_dir = opt.target_dir_train, src_ch = opt.input_ch, tgt_ch = opt.target_ch, \
-        raw_data_dir=opt.raw_data_dir, data_mode='data_split')
+        raw_data_dir=opt.raw_data_dir, data_mode='raw_data')
+    
+    
+
+    
     data.prepare_data()
     train_dataloader = data.train_dataloader()
     val_dataloader = data.val_dataloader()
@@ -30,7 +34,7 @@ if __name__ == '__main__':
     checkpoint_callback = ModelCheckpoint(dirpath="checkpoints/" + opt.dataset_name + '/Model', save_top_k=2, monitor="Generator (val) Loss")
     # trainer = pl.Trainer(max_epochs=1000, gpus=-1, logger = logger)
 
-    trainer = pl.Trainer(max_epochs=100, precision=16, gpus = 1, min_epochs=100, auto_lr_find=True, auto_scale_batch_size=False,
+    trainer = pl.Trainer(max_epochs=1000, precision=16, gpus = 1, min_epochs=100, auto_lr_find=True, auto_scale_batch_size=False,
                           progress_bar_refresh_rate=10, log_every_n_steps=1, \
                               check_val_every_n_epoch=10, \
                            logger = logger, callbacks = checkpoint_callback)#strategy="dp" #Data Parallel (strategy='dp') (multiple-gpus, 1 machine), tried strategy= 'ddp_spawn',

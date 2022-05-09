@@ -22,7 +22,7 @@ class TrainingFileCreation():
     Raw file directory is expected to be in the format of raw_file_dir/hubmap_id/*.tif
     """
     def __init__(self,  raw_filepaths: str, rescale_shape: tuple,\
-        input_channel: int = 25, output_channel: int = 4, tiles: bool = False,\
+        input_channel: int = 25, output_channel: int = 4, rescale_and_min_exposure: bool = True, tiles: bool = False,\
              tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
         
         
@@ -30,6 +30,7 @@ class TrainingFileCreation():
         self.rescale_shape = rescale_shape
         self.input_channel = input_channel
         self.output_channel = output_channel
+        self.rescale_and_min_exposure = rescale_and_min_exposure
         self.tiles = tiles
         self.tile_size = tile_size
         self.write_to_disk = write_to_disk
@@ -52,7 +53,7 @@ class TrainingFileCreation():
             src_image = this_image[:self.input_channel, :, :] # Select first n channels as condition image
             tgt_image = this_image[self.input_channel:, :, :] # Select last 29 - n channels as target image
 
-            if not self.tiles:
+            if not self.tiles and self.rescale_and_min_exposure:
                 src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
                 tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
 
@@ -64,13 +65,26 @@ class TrainingFileCreation():
                 slide_id = filepath.split('/')[-2]
                 img_file_name = slide_id + '_' + img_file_name
                 if self.tiles:
+                    continue
                     # Create tiles for source image
-                    self.save_tiles(img=src_image, img_file_name=img_file_name, src=True)
-                    self.save_tiles(img=tgt_image, img_file_name=img_file_name, src=False)
+                    # self.save_tiles(img=src_image, img_file_name=img_file_name, src=True)
+                    # self.save_tiles(img=tgt_image, img_file_name=img_file_name, src=False)
 
                 else:
                     TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_' + img_file_name), src_image) # Writing condition image
                     TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_' + img_file_name), tgt_image) # Writing target image
+            
+            elif self.tiles:
+                img_file_name = filepath.split('/')[-1]
+                slide_id = filepath.split('/')[-2]
+                img_file_name = slide_id + '_' + img_file_name
+                tiles_for_this_src_image = self.get_tiles(img=src_image, img_file_name=img_file_name, src=True)
+                tiles_for_this_tgt_image = self.get_tiles(img=tgt_image, img_file_name=img_file_name, src=False)
+                print(len(tiles_for_this_src_image), type(tiles_for_this_src_image))
+                src_images.extend(tiles_for_this_src_image)
+                tgt_images.extend(tiles_for_this_tgt_image)
+                
+
             
             else:
                 src_images.append(src_image)
@@ -83,7 +97,8 @@ class TrainingFileCreation():
             return src_images, tgt_images
     
     
-    def save_tiles(self, img, img_file_name,src):
+    def get_tiles(self, img, img_file_name,src):
+        this_image_tiles = []
         if src:
             channel = self.input_channel
         else:
@@ -94,11 +109,49 @@ class TrainingFileCreation():
         if src:
             for tile_id, tile in tiler.iterate(img):
                 tile = exposure.rescale_intensity(tile, out_range=(0,255))
-                TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_tile_{}'.format(tile_id) + img_file_name), tile) 
+                if self.write_to_disk:
+                    TrainingFileCreation.write_file(str(self.write_data_dir + '/train_A/_tile_{}'.format(tile_id) + img_file_name), tile) 
+                this_image_tiles.append(tile)
         else:
            for tile_id, tile in tiler.iterate(img):
                tile = exposure.rescale_intensity(tile, out_range=(0,255))
-               TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_tile_{}'.format(tile_id) + img_file_name), tile) 
+               this_image_tiles.append(tile)
+               if self.write_to_disk:
+                    TrainingFileCreation.write_file(str(self.write_data_dir + '/train_B/_tile_{}'.format(tile_id) + img_file_name), tile) 
+                
+
+        return this_image_tiles
+
+    def scale_data_and_save(self):
+        images = [] 
+        count = 0
+        for filepath in self.raw_filepaths:
+            this_image = io.imread(filepath)
+            
+            if not self.tiles:
+                this_image = TrainingFileCreation.rescale_image(this_image, self.rescale_shape)
+
+
+            if self.write_to_disk:
+                img_file_name = filepath.split('/')[-2] + '_' + filepath.split('/')[-1]
+
+                
+                if self.tiles:
+                    slide_id = filepath.split('/')[-2]
+                    img_file_name = slide_id + '_' + img_file_name
+                    # Create tiles for source image
+                    self.save_tiles(img=this_image, img_file_name=img_file_name, src=True)
+                else:
+                    TrainingFileCreation.write_file(str(self.write_data_dir + '/_' + img_file_name), this_image) # Writing condition image
+            
+            else:
+                images.append(this_image)
+            print('Count ', count )
+            
+            count += 1
+        
+        if not self.write_to_disk:
+            return images 
     
     @staticmethod
     def rescale_image(image, shape):
@@ -131,12 +184,22 @@ if __name__ == '__main__':
 
     filenames = list(images_29_channel['filename'])
 
-    print(len(filenames))
     filepaths = [raw_file_dir + filename for filename in filenames]
 
-    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = True,\
-     write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_20_9')
-    t.create_data_from_raw_files()
+    # t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = True,\
+    #  write_data_dir  = '/home/mxs2361/Dataset/codex_data/raw_data_scaled')
+    # # t.create_data_from_raw_files()
+    # t.scale_data_and_save()
+    filepaths = filepaths[:2]
+
+    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
+                input_channel= 19, output_channel = 10, rescale_and_min_exposure = False,
+            )
+    src_images, tgt_images = t.create_data_from_raw_files()
+    for image in src_images:
+        print(len(image), type(image))
+        print(image.shape)
+    images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(src_images, tgt_images)]
 
 
 

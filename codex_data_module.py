@@ -10,7 +10,7 @@ import pytorch_lightning as pl
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
 from skimage import exposure, img_as_ubyte, io, transform
-from utils_scripts.data_helper import get_images_as_matrix, get_image_as_matrix_with_metadata
+from utils_scripts.data_helper import get_images_as_matrix, get_image_as_matrix_with_metadata, get_src_target_split
 from typing import Optional
 import torch
 import numpy as np
@@ -19,7 +19,7 @@ from create_data import TrainingFileCreation
 class CODEXDataModule(pl.LightningDataModule):
 
     def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', raw_data_dir = None,\
-    src_ch: int=25, tgt_ch: int=4, data_format = 'tif', data_mode = "data_split"):
+    src_ch: int=25, tgt_ch: int=4, data_format = 'tif', data_mode = "data_split", images = None):
         super().__init__()
         self.src_data_dir = src_data_dir
         self.tgt_data_dir = tgt_data_dir
@@ -30,6 +30,9 @@ class CODEXDataModule(pl.LightningDataModule):
         self.src_ch = src_ch
         self.tgt_ch = tgt_ch
         self.train_data_precentige = 0.8 
+        self.images = images
+
+
 
 
     def prepare_data(self):
@@ -54,15 +57,25 @@ class CODEXDataModule(pl.LightningDataModule):
             filenames = list(images_29_channel['filename'])
 
             print(len(filenames))
+            #raw_data_scaled/HBM347.PSLC.425/reg1_stitched_expressions.ome.tif
             filepaths = [raw_file_dir + filename for filename in filenames]
 
-            t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = False,\
-                input_channel= self.src_ch, output_channel = self.tgt_ch,
-            write_data_dir  = '/home/mxs2361/Dataset/codex_data/Data_scaled_20_9')
+            filepaths = [raw_file_dir + '_'+filename.split('/')[-2] \
+                + '_reg1_stitched_expressions.ome.tif' for filename in filenames] 
+
+            t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
+                input_channel= self.src_ch, output_channel = self.tgt_ch, rescale_and_min_exposure = False,
+            )
             self.src_images, self.tgt_images = t.create_data_from_raw_files()
+            self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
+        
+        elif self.data_mode == 'image_given':
+            self.src_images, self.tgt_images = get_src_target_split(self.images)
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
         else:
             print(f'Invalid data mode {self.data_mode}')
+
+
 
     def setup(self, stage: Optional[str] = None):
         # There are also data operations you might want to perform on every GPU. Use setup to do things like: transform
@@ -74,17 +87,29 @@ class CODEXDataModule(pl.LightningDataModule):
         return DataLoader(self.images[:self.val_sample], batch_size = 32, num_workers=2, pin_memory=True, persistent_workers=True)
 
     def val_dataloader(self):
-        return DataLoader(self.images[self.val_sample: self.train_val_split], batch_size = 32, num_workers=16, pin_memory=True, persistent_workers=True)
+        return DataLoader(self.images[self.val_sample: self.train_val_split], batch_size = 32, num_workers=4, pin_memory=True, persistent_workers=True)
 
     def test_dataloader(self):
-        return DataLoader(self.images[-self.train_val_split:], batch_size = 32, num_workers=16, pin_memory=True, persistent_workers=True) 
+        return DataLoader(self.images[-self.train_val_split:], batch_size = 32, num_workers=4, pin_memory=True, persistent_workers=True) 
     
     
 
+def test_mode_image_given():
+    images = get_images_as_matrix(opt.raw_data_dir, channel_size = 29, file_type='tif')
+    data = CODEXDataModule(images=images) 
 
+    
+    data.prepare_data()
+    train_dataloader = data.train_dataloader()
+    train_data = next(iter(train_dataloader))
+    src_image, tgt_image = train_data
+
+    print(len(train_data))
+    print(type(train_data))
+    print(src_image.shape, tgt_image.shape)
 
 def test():
-    raw_data_dir = '/home/mxs2361/Dataset/codex_data/raw_data/'
+    raw_data_dir = '/home/mxs2361/Dataset/codex_data/raw_data_scaled/'
 
     #Test with the split data
     # c = CODEXDataModule(src_data_dir = '/home/mxs2361/Dataset/codex_data/Data_scaled/train_A/', \

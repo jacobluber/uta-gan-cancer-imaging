@@ -6,10 +6,10 @@ def save_image( image_tensor, path):
     np_image = image_tensor[0].squeeze().cpu().float().numpy()
     tif.imwrite(path + '*.tif', np_image, compression='zlib', photometric='minisblack')
 
-def save(target, gen, path, epoch, image=False, model=False):
+def save(target, gen, path, epoch, image=False, model=False, train_status = 'train'):
     if image:
-        path_real =  path + '/epoch_{}_'.format(epoch) + 'real_'
-        path_fake = path + '/epoch_{}_'.format(epoch) + 'fake_'
+        path_real =  path + f'/{train_status}_epoch_{epoch}_real_'
+        path_fake = path + f'/{train_status}_epoch_{epoch}_fake_'
         print(target.shape, target.dtype)
         save_image(target, path_real)
         save_image(gen, path_fake)

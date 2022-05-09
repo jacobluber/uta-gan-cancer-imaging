@@ -32,6 +32,16 @@ def get_images_as_matrix(data_path, channel_size, file_type='tif'):
 
     return images
 
+def get_src_target_split(images, input_channel, output_channel):
+    src_images = []
+    tgt_images = []
+    for this_image in images:
+        src_image = this_image[input_channel, :, :] # Select first n channels as condition image
+        tgt_image = this_image[input_channel:, :, :] # Select last 29 - n channels as target image
+        src_images.append(src_image)
+        tgt_images.append(tgt_image)
+    return src_images, tgt_images
+
 def read_tiff_image_and_meta(filename):
     with TiffFile(filename) as tif:
         
