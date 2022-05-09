@@ -23,7 +23,7 @@ python3 train_lightning.py --input_ch 20 --target_ch 9 --input_dir_train \
 /home/mxs2361/Dataset/codex_data/Data_scaled_20_9/train_A/ --target_dir_train \
 /home/mxs2361/Dataset/codex_data/Data_scaled_20_9/train_B/  --n_workers 256 --saturation_clip_input False \
 --saturation_clip_target False --data_type 16 --batch_size 4 --n_epochs 250 \
---n_downsample 2 --n_residual 2 --n_df 10 --n_D 3 \
---tb_logger_name four_channel_20_9 --dataset_name four_channel_20_9 \
+--n_downsample 6 --n_residual 6 --n_df 10 --n_D 3 \
+--tb_logger_name 1024_20_9 --dataset_name 1024_20_9 \
 --raw_data_dir /home/mxs2361/Dataset/codex_data/raw_data/
 

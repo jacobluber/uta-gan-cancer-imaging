@@ -16,7 +16,7 @@ if __name__ == '__main__':
     print(opt)
     data = CODEXDataModule(src_data_dir = opt.input_dir_train, \
     tgt_data_dir = opt.target_dir_train, src_ch = opt.input_ch, tgt_ch = opt.target_ch, \
-        raw_data_dir=opt.raw_data_dir, data_mode='raw_data')
+        raw_data_dir=opt.raw_data_dir, data_mode='data_split')
     data.prepare_data()
     train_dataloader = data.train_dataloader()
     val_dataloader = data.val_dataloader()
