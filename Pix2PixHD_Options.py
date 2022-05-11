@@ -76,6 +76,7 @@ class BaseOption(object):
         self.parser.add_argument('--save_scale', type=float, default=1)
         self.parser.add_argument('--display_scale', type=float, default=1)
         self.parser.add_argument('--tb_logger_name', type=str, default='ligtning_codex')
+        self.parser.add_argument('--channel_ids', type=str)
 
         
     def parse(self):

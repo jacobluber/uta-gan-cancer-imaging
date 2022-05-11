@@ -22,8 +22,9 @@ class TrainingFileCreation():
     Raw file directory is expected to be in the format of raw_file_dir/hubmap_id/*.tif
     """
     def __init__(self,  raw_filepaths: str, rescale_shape: tuple,\
-        input_channel: int = 25, output_channel: int = 4, rescale_and_min_exposure: bool = True, tiles: bool = False,\
-             tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
+        input_channel: int = 25, output_channel: int = 4, input_channel_ids = None, target_channel_ids = None, \
+        rescale_and_min_exposure: bool = True, tiles: bool = False,\
+        tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
         
         
         self.raw_filepaths = raw_filepaths
@@ -35,6 +36,9 @@ class TrainingFileCreation():
         self.tile_size = tile_size
         self.write_to_disk = write_to_disk
         self.write_data_dir = write_data_dir
+
+        self.input_channel_ids = input_channel_ids
+        self.target_channel_ids = target_channel_ids
         
 
 
@@ -43,6 +47,25 @@ class TrainingFileCreation():
             pathlib.Path(write_data_dir + '/train_A/').mkdir(parents=True, exist_ok=True)
             pathlib.Path(write_data_dir + '/train_B/').mkdir(parents=True, exist_ok=True)
     
+    def get_selected_channels(self, this_image, input_channels, target_channels = None):
+        #For consecutive channels
+        if isinstance(input_channels, int):
+            src_image = this_image[:input_channels, :, :] # Select first n channels as condition image
+            tgt_image = this_image[input_channels:, :, :] # Select last 29 - n channels as target image
+            return src_image, tgt_image
+        
+        src_image = []
+        tgt_image = []
+        for channel_id in input_channels:
+            src_image.append(this_image[channel_id, :, :])
+        
+        for channel_id in target_channels:
+            tgt_image.append(this_image[channel_id, :, :])
+
+        return np.asarray(src_image), np.asarray(tgt_image)
+
+
+    
     def create_data_from_raw_files(self):
         src_images = []
         tgt_images = []
@@ -50,14 +73,19 @@ class TrainingFileCreation():
         for filepath in self.raw_filepaths:
             this_image = io.imread(filepath)
 
-            src_image = this_image[:self.input_channel, :, :] # Select first n channels as condition image
-            tgt_image = this_image[self.input_channel:, :, :] # Select last 29 - n channels as target image
+            # src_image = this_image[:self.input_channel, :, :] # Select first n channels as condition image
+            # tgt_image = this_image[self.input_channel:, :, :] # Select last 29 - n channels as target image
+
+            # input_channels = [i for i in range(self.input_channel)]
+            # target_channels = [i for i in range(self.input_channel, this_image.shape[0])]
+            print(self.input_channel_ids, self.target_channel_ids)
+            src_image, tgt_image = self.get_selected_channels(this_image, input_channels=self.input_channel_ids, target_channels=self.target_channel_ids)
 
             if not self.tiles and self.rescale_and_min_exposure:
                 src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
                 tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
 
-            assert src_image.shape[0] == self.input_channel, "Source image dimension mismatch"
+            assert src_image.shape[0] == self.input_channel, f"Source image dimension mismatch, src_image channel {src_image.shape[0]}, required input channel {self.input_channel}"
             assert tgt_image.shape[0] == self.output_channel, "Target image dimension mismatch"
 
             if self.write_to_disk:
@@ -193,7 +221,9 @@ if __name__ == '__main__':
     filepaths = filepaths[:2]
 
     t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
-                input_channel= 19, output_channel = 10, rescale_and_min_exposure = False,
+                input_channel= 19, output_channel = 10,\
+                    input_channel_ids=[19, 17, 7, 23, 11, 27, 10, 13, 22, 15, 26, 18, 24, 8, 25, 5],\
+                    target_channel_ids=[0, 1, 2, 3, 4, 6, 9, 12, 14, 16, 20, 21, 28], rescale_and_min_exposure = False,
             )
     src_images, tgt_images = t.create_data_from_raw_files()
     for image in src_images:

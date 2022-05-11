@@ -1,4 +1,5 @@
 from gc import callbacks
+import json
 from codex_data_module import CODEXDataModule
 from pix2pixhd_lightning import Pix2PixHDCodex
 from Pix2PixHD_Options import TrainOption
@@ -14,8 +15,14 @@ import pytorch_lightning as pl
 if __name__ == '__main__':
     opt = TrainOption().parse()
     print(opt)
+    with open(opt.channel_ids, 'r') as f:
+        channel_ids = json.load(f)
+    opt.input_ch = len(channel_ids['source_channel_ids'])
+    opt.target_ch = len(channel_ids['target_channel_ids']) 
+
     data = CODEXDataModule(src_data_dir = opt.input_dir_train, \
-    tgt_data_dir = opt.target_dir_train, src_ch = opt.input_ch, tgt_ch = opt.target_ch, \
+    tgt_data_dir = opt.target_dir_train, src_ch = len(channel_ids['source_channel_ids']), tgt_ch = len(channel_ids['target_channel_ids']), \
+        src_channel_ids=channel_ids['source_channel_ids'], tgt_channel_ids=channel_ids['target_channel_ids'],
         raw_data_dir=opt.raw_data_dir, data_mode='raw_data')
     
     
@@ -30,7 +37,7 @@ if __name__ == '__main__':
     display_step = 1
     
     pix2pix = Pix2PixHDCodex(opt, display_step)
-    logger = TensorBoardLogger("tb_logs", name= opt.tb_logger_name)
+    logger = TensorBoardLogger("tb_logs", name= str(channel_ids['uid']) + opt.tb_logger_name)
     checkpoint_callback = ModelCheckpoint(dirpath="checkpoints/" + opt.dataset_name + '/Model', save_top_k=2, monitor="Generator (val) Loss")
     # trainer = pl.Trainer(max_epochs=1000, gpus=-1, logger = logger)
 

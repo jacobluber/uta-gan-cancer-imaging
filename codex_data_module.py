@@ -15,11 +15,12 @@ from typing import Optional
 import torch
 import numpy as np
 from create_data import TrainingFileCreation
+import json
 
 class CODEXDataModule(pl.LightningDataModule):
 
     def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', raw_data_dir = None,\
-    src_ch: int=25, tgt_ch: int=4, data_format = 'tif', data_mode = "data_split", images = None):
+    src_ch: int=25, tgt_ch: int=4, src_channel_ids: list= None, tgt_channel_ids: list=None, data_format = 'tif', data_mode = "data_split", images = None):
         super().__init__()
         self.src_data_dir = src_data_dir
         self.tgt_data_dir = tgt_data_dir
@@ -29,6 +30,8 @@ class CODEXDataModule(pl.LightningDataModule):
         self.data_mode = data_mode
         self.src_ch = src_ch
         self.tgt_ch = tgt_ch
+        self.src_channel_ids = src_channel_ids
+        self.tgt_channel_ids = tgt_channel_ids
         self.train_data_precentige = 0.8 
         self.images = images
 
@@ -64,7 +67,8 @@ class CODEXDataModule(pl.LightningDataModule):
                 + '_reg1_stitched_expressions.ome.tif' for filename in filenames] 
 
             t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
-                input_channel= self.src_ch, output_channel = self.tgt_ch, rescale_and_min_exposure = False,
+                input_channel= self.src_ch, output_channel = self.tgt_ch, \
+                    input_channel_ids = self.src_channel_ids, target_channel_ids=self.tgt_channel_ids,rescale_and_min_exposure = False,
             )
             self.src_images, self.tgt_images = t.create_data_from_raw_files()
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
@@ -115,8 +119,14 @@ def test():
     # c = CODEXDataModule(src_data_dir = '/home/mxs2361/Dataset/codex_data/Data_scaled/train_A/', \
     #         tgt_data_dir='/home/mxs2361/Dataset/codex_data/Data_scaled/train_B/' )
     #Test with raw_data
+    with open('channel_ids.json') as fp:
+        channel_ids = json.load(fp)
     c = CODEXDataModule(src_data_dir = '/home/mxs2361/Dataset/codex_data/Data_scaled/train_A/', \
-            tgt_data_dir='/home/mxs2361/Dataset/codex_data/Data_scaled/train_B/', raw_data_dir=raw_data_dir, data_mode='raw_data' )
+            tgt_data_dir='/home/mxs2361/Dataset/codex_data/Data_scaled/train_B/', \
+                src_ch=16, tgt_ch=13,
+            src_channel_ids= channel_ids['source_channel_ids'],
+            tgt_channel_ids= channel_ids['target_channel_ids'],
+            raw_data_dir=raw_data_dir, data_mode='raw_data' )
     c.prepare_data()
     train_batch = c.train_dataloader()
     train_data = next(iter(train_batch))

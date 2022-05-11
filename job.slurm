@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=patch_train    # create a short name for your job
+#SBATCH --job-name=random_train    # create a short name for your job
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=4        # cpu-cores per task (>1 if multi-threaded tasks)
@@ -19,11 +19,9 @@ which python
 conda activate pytorch_gpu
 
 
-python3 train_lightning.py --input_ch 21 --target_ch 8 --input_dir_train \
-/home/mxs2361/Dataset/codex_data/Data_scaled_20_9/train_A/ --target_dir_train \
-/home/mxs2361/Dataset/codex_data/Data_scaled_20_9/train_B/  --n_workers 256 --saturation_clip_input False \
+python3 train_lightning.py --n_workers 256 --saturation_clip_input False \
 --saturation_clip_target False --data_type 16 --batch_size 4 --n_epochs 250 \
 --n_downsample 2 --n_residual 2 --n_df 10 --n_D 3 \
---tb_logger_name 1024_21_8_patch --dataset_name 1024_21_8_patch \
---raw_data_dir /home/mxs2361/Dataset/codex_data/raw_data_scaled/
-
+--tb_logger_name random_test_70 --dataset_name random_test_70 \
+--raw_data_dir /home/mxs2361/Dataset/codex_data/raw_data_scaled/ \
+--channel_ids channel_id_distribution/random/random_0.7.json
