@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=random_train    # create a short name for your job
+#SBATCH --job-name=cross_dataset    # create a short name for your job
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # total number of tasks across all nodes
 #SBATCH --cpus-per-task=4        # cpu-cores per task (>1 if multi-threaded tasks)
@@ -22,6 +22,6 @@ conda activate pytorch_gpu
 python3 train_lightning.py --n_workers 256 --saturation_clip_input False \
 --saturation_clip_target False --data_type 16 --batch_size 4 --n_epochs 250 \
 --n_downsample 2 --n_residual 2 --n_df 10 --n_D 3 \
---tb_logger_name random_test_70 --dataset_name random_test_70 \
+--tb_logger_name cross_dataset --dataset_name cross_dataset \
 --raw_data_dir /home/mxs2361/Dataset/codex_data/raw_data_scaled/ \
---channel_ids channel_id_distribution/random/random_0.7.json
+--channel_ids channel_id_distribution/cross_dataset_check/cross_check_train_hub_6_2.jsoncross_data_check_6_2.json

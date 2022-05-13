@@ -35,10 +35,10 @@ if __name__ == '__main__':
 
     
     display_step = 1
-    
+    opt.dataset_name = opt.dataset_name + '_' +str(channel_ids['uid']) #For saving models and test images
     pix2pix = Pix2PixHDCodex(opt, display_step)
-    logger = TensorBoardLogger("tb_logs", name= str(channel_ids['uid']) + opt.tb_logger_name)
-    checkpoint_callback = ModelCheckpoint(dirpath="checkpoints/" + opt.dataset_name + '/Model', save_top_k=2, monitor="Generator (val) Loss")
+    logger = TensorBoardLogger("tb_logs_cluster_check", name= opt.tb_logger_name  + '_' + str(channel_ids['uid']))
+    checkpoint_callback = ModelCheckpoint(dirpath="checkpoints/" + opt.dataset_name  + '/Model', save_top_k=2, monitor="Generator (val) Loss")
     # trainer = pl.Trainer(max_epochs=1000, gpus=-1, logger = logger)
 
     trainer = pl.Trainer(max_epochs=1000, precision=16, gpus = 1, min_epochs=100, auto_lr_find=True, auto_scale_batch_size=False,
