@@ -64,6 +64,7 @@ class Pix2PixHDCodex(pl.LightningModule):
             
             print('epoch ', self.current_epoch)
             fake = self.gen(condition).detach()
+            self.opt.image_dir = '/'.join(self.opt.image_dir.split('/')[:-1]) + '/Train'
             save(target = real, gen = fake, path = self.opt.image_dir, epoch = self.current_epoch, image=True, train_status='train')
             # print('Image saved')
             # display_progress(condition[0], fake[0], real[0])
@@ -86,6 +87,7 @@ class Pix2PixHDCodex(pl.LightningModule):
         if self.current_epoch % 100 == 0: # and optimizer_idx==1
             
             fake = self.gen(condition).detach()
+            self.opt.image_dir = '/'.join(self.opt.image_dir.split('/')[:-1]) + '/Train'
             save(target = real, gen = fake, path = self.opt.image_dir, epoch = self.current_epoch, image=True, train_status='validation')
             # print('Image saved')
             # display_progress(condition[0], fake[0], real[0])

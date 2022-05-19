@@ -6,6 +6,7 @@ Author: mxs2361
 '''
 
 
+from glob import glob
 import pytorch_lightning as pl
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
@@ -20,7 +21,7 @@ import json
 class CODEXDataModule(pl.LightningDataModule):
 
     def __init__(self, src_data_dir: str ='data/source/', tgt_data_dir: str='data/target/', raw_data_dir = None,\
-    src_ch: int=25, tgt_ch: int=4, src_channel_ids: list= None, tgt_channel_ids: list=None, data_format = 'tif', data_mode = "data_split", images = None):
+    src_ch: int=25, tgt_ch: int=4, src_channel_ids: list= None, tgt_channel_ids: list=None, data_format = 'tif', tiles: bool= False, data_mode = "data_split", images = None):
         super().__init__()
         self.src_data_dir = src_data_dir
         self.tgt_data_dir = tgt_data_dir
@@ -34,6 +35,7 @@ class CODEXDataModule(pl.LightningDataModule):
         self.tgt_channel_ids = tgt_channel_ids
         self.train_data_precentige = 0.8 
         self.images = images
+        self.tiles = tiles
 
 
 
@@ -51,7 +53,7 @@ class CODEXDataModule(pl.LightningDataModule):
             
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
         
-        elif self.data_mode == 'raw_data':
+        elif self.data_mode == 'raw_data_hubmap':
             import pandas as pd
             raw_file_dir = self.raw_data_dir
             df = pd.read_csv('/home/mxs2361/projects/hubmap_data_analysis/codex_meta_info.csv')
@@ -60,19 +62,39 @@ class CODEXDataModule(pl.LightningDataModule):
             filenames = list(images_29_channel['filename'])
 
             print(len(filenames))
+            print(filenames)
             #raw_data_scaled/HBM347.PSLC.425/reg1_stitched_expressions.ome.tif
+            print(raw_file_dir)
             filepaths = [raw_file_dir + filename for filename in filenames]
+            print(filepaths)
 
             filepaths = [raw_file_dir + '_'+filename.split('/')[-2] \
                 + '_reg1_stitched_expressions.ome.tif' for filename in filenames] 
 
-            t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
+            t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=self.tiles, write_to_disk = False,\
                 input_channel= self.src_ch, output_channel = self.tgt_ch, \
                     input_channel_ids = self.src_channel_ids, target_channel_ids=self.tgt_channel_ids,rescale_and_min_exposure = False,
             )
             self.src_images, self.tgt_images = t.create_data_from_raw_files()
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
         
+        
+        elif self.data_mode == 'raw_data':
+            
+            raw_file_dir = self.raw_data_dir
+            
+            #raw_data_scaled/HBM347.PSLC.425/reg1_stitched_expressions.ome.tif
+
+            filepaths = glob(raw_file_dir + '/*.tif')
+            print(filepaths)
+            assert len(filepaths) > 0,f"No File Found, for the dir {raw_file_dir}"
+
+            t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=self.tiles, write_to_disk = False,\
+                input_channel= self.src_ch, output_channel = self.tgt_ch, \
+                    input_channel_ids = self.src_channel_ids, target_channel_ids=self.tgt_channel_ids,rescale_and_min_exposure = True,
+            )
+            self.src_images, self.tgt_images = t.create_data_from_raw_files()
+            self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)] 
         elif self.data_mode == 'image_given':
             self.src_images, self.tgt_images = get_src_target_split(self.images)
             self.images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(self.src_images, self.tgt_images)]
@@ -93,7 +115,10 @@ class CODEXDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(self.images[self.val_sample: self.train_val_split], batch_size = 32, num_workers=4, pin_memory=True, persistent_workers=True)
 
-    def test_dataloader(self):
+    def test_dataloader(self, test_mode = False):
+        if test_mode:
+            #Return all the images
+            return DataLoader(self.images, batch_size = 32, num_workers=4, pin_memory=True, persistent_workers=True) 
         return DataLoader(self.images[-self.train_val_split:], batch_size = 32, num_workers=4, pin_memory=True, persistent_workers=True) 
     
     

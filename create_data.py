@@ -24,7 +24,7 @@ class TrainingFileCreation():
     def __init__(self,  raw_filepaths: str, rescale_shape: tuple,\
         input_channel: int = 25, output_channel: int = 4, input_channel_ids = None, target_channel_ids = None, \
         rescale_and_min_exposure: bool = True, tiles: bool = False,\
-        tile_size: int = 512, write_to_disk: bool = True, write_data_dir: str = None):
+        tile_size: int = 512, write_to_disk: bool = False, write_data_dir: str = None):
         
         
         self.raw_filepaths = raw_filepaths
@@ -82,8 +82,11 @@ class TrainingFileCreation():
             src_image, tgt_image = self.get_selected_channels(this_image, input_channels=self.input_channel_ids, target_channels=self.target_channel_ids)
 
             if not self.tiles and self.rescale_and_min_exposure:
-                src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
-                tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
+                if src_image.shape[1] <= 1024:
+                    print("image is already scaled, scalling skipped")
+                else:
+                    src_image = TrainingFileCreation.rescale_image(src_image, self.rescale_shape)
+                    tgt_image = TrainingFileCreation.rescale_image(tgt_image, self.rescale_shape)
 
             assert src_image.shape[0] == self.input_channel, f"Source image dimension mismatch, src_image channel {src_image.shape[0]}, required input channel {self.input_channel}"
             assert tgt_image.shape[0] == self.output_channel, "Target image dimension mismatch"
@@ -122,6 +125,7 @@ class TrainingFileCreation():
             count += 1
         
         if not self.write_to_disk:
+            print('Prepared image shape ', np.asarray(src_images[0]).shape)
             return src_images, tgt_images
     
     
@@ -200,36 +204,65 @@ class TrainingFileCreation():
     def write_file(path, img):
         tif.imwrite(path, img)
 
+
+def convert_to_scaled_files(files, new_dir, shape=(1024,1024)):
+    for filename in files:
+        print(filename)
+        this_image = io.imread(filename)
+        this_image = TrainingFileCreation.rescale_image(this_image, shape) 
+        new_file_name = filename.split('/')[-1]
+        new_path = new_dir + 'scaled_' + new_file_name
+        TrainingFileCreation.write_file(new_path, this_image)
+def add_random_channel(files, new_dir, shape=(1024,1024)):
+    for filename in files:
+        print(filename)
+        this_image = io.imread(filename)
+        shape = (this_image.shape[1],this_image.shape[2])
+        print(shape)
+        this_image = this_image.tolist()
+        random_image = np.random.randint(1, 255, size=shape)
+        this_image.append(random_image)
+        this_image = np.asarray(this_image)
+        print(this_image.shape)
+        new_file_name = filename.split('/')[-1]
+        new_path = new_dir + 'dimension_added_' + new_file_name
+        TrainingFileCreation.write_file(new_path, this_image)
+
 if __name__ == '__main__':
     import pandas as pd
     
-    raw_file_dir = '/home/mxs2361/Dataset/codex_data/raw_data/'
+    raw_file_dir = '/home/mxs2361/Dataset/codex_data/nih_tiff_images/'
 
-    df = pd.read_csv('/home/mxs2361/projects/hubmap_data_analysis/codex_meta_info.csv')
+    files = glob.glob(raw_file_dir + '*.tif')
+
+    # print(files)
+    # convert_to_scaled_files(files, '/home/mxs2361/Dataset/codex_data/nih_tiff_images_scaled/')
+    add_random_channel(files, '/home/mxs2361/Dataset/codex_data/nih_tiff_images_random_channel_added/')
+    # df = pd.read_csv('/home/mxs2361/projects/hubmap_data_analysis/codex_meta_info.csv')
 
 
-    images_29_channel = df[df['channel'] == 29] 
+    # images_29_channel = df[df['channel'] == 29] 
 
-    filenames = list(images_29_channel['filename'])
+    # filenames = list(images_29_channel['filename'])
 
-    filepaths = [raw_file_dir + filename for filename in filenames]
+    # filepaths = [raw_file_dir + filename for filename in filenames]
 
-    # t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = True,\
-    #  write_data_dir  = '/home/mxs2361/Dataset/codex_data/raw_data_scaled')
-    # # t.create_data_from_raw_files()
-    # t.scale_data_and_save()
-    filepaths = filepaths[:2]
+    # # t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=False, write_to_disk = True,\
+    # #  write_data_dir  = '/home/mxs2361/Dataset/codex_data/raw_data_scaled')
+    # # # t.create_data_from_raw_files()
+    # # t.scale_data_and_save()
+    # filepaths = filepaths[:2]
 
-    t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
-                input_channel= 19, output_channel = 10,\
-                    input_channel_ids=[19, 17, 7, 23, 11, 27, 10, 13, 22, 15, 26, 18, 24, 8, 25, 5],\
-                    target_channel_ids=[0, 1, 2, 3, 4, 6, 9, 12, 14, 16, 20, 21, 28], rescale_and_min_exposure = False,
-            )
-    src_images, tgt_images = t.create_data_from_raw_files()
-    for image in src_images:
-        print(len(image), type(image))
-        print(image.shape)
-    images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(src_images, tgt_images)]
+    # t =  TrainingFileCreation(raw_filepaths = filepaths, rescale_shape = (1024, 1024), tiles=True, write_to_disk = False,\
+    #             input_channel= 19, output_channel = 10,\
+    #                 input_channel_ids=[19, 17, 7, 23, 11, 27, 10, 13, 22, 15, 26, 18, 24, 8, 25, 5],\
+    #                 target_channel_ids=[0, 1, 2, 3, 4, 6, 9, 12, 14, 16, 20, 21, 28], rescale_and_min_exposure = False,
+    #         )
+    # src_images, tgt_images = t.create_data_from_raw_files()
+    # for image in src_images:
+    #     print(len(image), type(image))
+    #     print(image.shape)
+    # images = [(src.astype(np.float32), tgt.astype(np.float32)) for src, tgt in zip(src_images, tgt_images)]
 
 
 
