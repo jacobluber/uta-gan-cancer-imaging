@@ -42,6 +42,6 @@ channel_ids_json = {"uid": "1", "source_channel_ids": [0, 2, 1, 5, 3, 4], "targe
 For more options see the Pix2PixHD_Options.py file
 
 ## Images from Inference
-![alt Real CD48](images/gen_image_inference_CD48.png)
-![alt Generated CD48](images/real_image_CD48.png)
+<!-- ![alt Real CD48](images/gen_image_inference_CD48.png)
+![alt Generated CD48](images/real_image_CD48.png) -->
 ![alt Generated CD48](images/sample_output.png)
