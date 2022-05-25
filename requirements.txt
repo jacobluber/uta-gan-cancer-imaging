@@ -1,0 +1,10 @@
+--pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cu113
+torchvision --extra-index-url https://download.pytorch.org/whl/nightly/cu113
+tensorboard==2.8.0
+tiler==0.5.7
+tifffile==2022.2.9
+scikit-image==0.19.2
+numpy
+matplotlib
+python-dateutil
+pytorch-lightning  @ git+https://github.com/PyTorchLightning/pytorch-lightning.git@f8e50f9cf52cb689a5d290522c4c5bd2cc563406

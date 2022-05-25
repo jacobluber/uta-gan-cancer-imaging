@@ -59,7 +59,7 @@ class Generator(nn.Module):
         model += [pad(3), nn.Conv2d(n_gf, output_ch, kernel_size=7, padding=0)]
         self.model = nn.Sequential(*model)
 
-        print(self)
+        # print(self)
         print("the number of G parameters", sum(p.numel() for p in self.parameters() if p.requires_grad))
 
     def forward(self, x):
